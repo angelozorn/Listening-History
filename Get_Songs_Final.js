@@ -11,16 +11,13 @@ const util = require('util');
 const credentials = JSON.parse(fs.readFileSync(__dirname + '/credentials.json'));
 const redirect_uri = 'http://localhost:8888/callback';
 
-
-
-
-
 var con = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "WearyBunny12916",
-  database: "spotify_listening_history"
-});
+    host: "spotify-listening-history-022724.cnwmw4kealbs.us-east-1.rds.amazonaws.com",
+    port: "3306",
+    user: "admin",
+    password: "WearyBunny12916",
+    database: "spotify_listening_history_022724"
+  });
 
 con.connect(function(err) {
     if (err) throw err;
@@ -54,83 +51,89 @@ if (fs.existsSync(__dirname + '/authorization.json')) {
 
 async function saveRecentTracks(authorization) {
     try {
-      const newAuthorization = await authorizeWithRefreshToken(
-        credentials.client_id,
-        credentials.client_secret,
-        authorization.refresh_token
-      );
-  
-      var latestTimestamp;
-      var directory = __dirname + '/data/';
-  
-      try {
-        const track = await readFirstTrackFrom(directory + "latest.json");
-        latestTimestamp = track.played_at;
-      } catch (error) {
-        console.error(error);
-        // Handle error if needed
-        return process.exit(1);
-      }
-  
-      const tracks = await getRecentTracks(newAuthorization.access_token, latestTimestamp);
-  
-      if (tracks.items.length === 0) {
-        console.log('No new songs have played since ' + new Date(latestTimestamp).toLocaleString());
-      } else {
-        // Insert tracks directly into MySQL tables
-        const mostRecentTrack = tracks.items[0];
-        fs.writeFileSync(directory + "latest.json", JSON.stringify(mostRecentTrack, null, 2));
+        const newAuthorization = await authorizeWithRefreshToken(
+            credentials.client_id,
+            credentials.client_secret,
+            authorization.refresh_token
+        );
 
-        for (const track of tracks.items) {
-          const simplifiedTrack = {
-            artist: track.track.artists.map(artist => artist.name).join(', '),
-            songName: track.track.name,
-            trackId: track.track.id,
-            playTime: track.played_at,
-            duration: track.track.duration_ms,
-            albumName: track.track.album.name
-          };
-  
-          try {
-            // Insert into MySQL 'songs' table
-            await queryAsync(
-              'INSERT INTO songs (artist, songName, trackId, playTime, duration, albumName) VALUES (?, ?, ?, ?, ?, ?)',
-              Object.values(simplifiedTrack)
-            );
-  
-            // Split the artists by comma and insert into 'split_songs' table
-            for (const artist of simplifiedTrack.artist.split(',')) {
-              const artist_track = {
-                artist: artist.trim(),
-                song: simplifiedTrack.songName,
-                trackId: simplifiedTrack.trackId,
-                playTime: simplifiedTrack.playTime,
-                duration: simplifiedTrack.duration,
-                albumName: simplifiedTrack.albumName
-              };
-  
-              await queryAsync(
-                `INSERT INTO split_songs (artist, songName, trackId, playTime, duration, albumName) VALUES (?, ?, ?, ?, ?, ?)`,
-                Object.values(artist_track)
-              );
-            }
-  
-            console.log('Inserted songs into MySQL tables.');
-          } catch (error) {
+        var latestTimestamp;
+        var directory = __dirname + '/data/';
+
+        try {
+            const track = await readFirstTrackFrom(directory + "latest.json");
+            latestTimestamp = track.played_at;
+        } catch (error) {
             console.error(error);
             // Handle error if needed
             return process.exit(1);
-          }
         }
-      }
+
+        const tracks = await getRecentTracks(newAuthorization.access_token, latestTimestamp);
+
+        if (tracks.items.length === 0) {
+            console.log('No new songs have played since ' + new Date(latestTimestamp).toLocaleString());
+        } else {
+            // Insert tracks directly into MySQL tables
+            const mostRecentTrack = tracks.items[0];
+            fs.writeFileSync(directory + "latest.json", JSON.stringify(mostRecentTrack, null, 2));
+
+            for (const track of tracks.items) {
+                const simplifiedTrack = {
+                    artist: track.track.artists.map(artist => artist.name).join(', '),
+                    songName: track.track.name,
+                    trackId: track.track.id,
+                    playTime: track.played_at,
+                    duration: track.track.duration_ms,
+                    albumName: track.track.album.name
+                };
+
+                try {
+                    // Insert into MySQL 'songs' table
+                    await queryAsync(
+                        'INSERT INTO songs (artist, songName, trackId, playTime, duration, albumName) VALUES (?, ?, ?, ?, ?, ?)',
+                        Object.values(simplifiedTrack)
+                    );
+
+                    // Split the artists by comma and insert into 'split_songs' table
+                    for (const artist of simplifiedTrack.artist.split(',')) {
+                        const artist_track = {
+                            artist: artist.trim(),
+                            song: simplifiedTrack.songName,
+                            trackId: simplifiedTrack.trackId,
+                            playTime: simplifiedTrack.playTime,
+                            duration: simplifiedTrack.duration,
+                            albumName: simplifiedTrack.albumName
+                        };
+
+                        await queryAsync(
+                            `INSERT INTO split_songs (artist, songName, trackId, playTime, duration, albumName) VALUES (?, ?, ?, ?, ?, ?)`,
+                            Object.values(artist_track)
+                        );
+                    }
+
+                    console.log('Inserted songs into MySQL tables.');
+                } catch (error) {
+                    if (error.code === 'ER_DATA_TOO_LONG') {
+                        console.warn('Skipping row due to data too long:', simplifiedTrack);
+                        continue; // Skip this iteration and move to the next row
+                    }
+
+                    console.error(error);
+                    // Handle other errors if needed
+                    return process.exit(1);
+                }
+            }
+        }
     } catch (error) {
-      console.error(error);
-      // Handle error if needed
-      return process.exit(1);
+        console.error(error);
+        // Handle other errors if needed
+        return process.exit(1);
     } finally {
-      process.exit(0);
+        process.exit(0);
     }
-  }
+}
+
   
 
   function readFirstTrackFrom(file) {
