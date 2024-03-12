@@ -91,7 +91,7 @@ async function saveRecentTracks(authorization) {
                 try {
                     // Insert into MySQL 'songs' table
                     await queryAsync(
-                        'INSERT INTO songs (artist, songName, trackId, playTime, duration, albumName) VALUES (?, ?, ?, ?, ?, ?)',
+                        'INSERT INTO songs_test (artist, songName, trackId, playTime, duration, albumName) VALUES (?, ?, ?, ?, ?, ?)',
                         Object.values(simplifiedTrack)
                     );
 
@@ -107,7 +107,7 @@ async function saveRecentTracks(authorization) {
                         };
 
                         await queryAsync(
-                            `INSERT INTO split_songs (artist, songName, trackId, playTime, duration, albumName) VALUES (?, ?, ?, ?, ?, ?)`,
+                            `INSERT INTO split_songs_test (artist, songName, trackId, playTime, duration, albumName) VALUES (?, ?, ?, ?, ?, ?)`,
                             Object.values(artist_track)
                         );
                     }
