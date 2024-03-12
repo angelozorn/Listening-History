@@ -31,7 +31,7 @@ try:
                             COUNT(Duration) AS listenCount,
                             SUM(Duration) AS timeListened
                         FROM
-                            songs
+                            songs_test
                         GROUP BY
                             Artist, songName, playDate;"""
 
@@ -72,7 +72,7 @@ try:
                 COUNT(Duration) AS listenCount,
                 SUM(Duration) AS timeListened
             FROM
-                split_songs
+                split_songs_test
             
             GROUP BY
                 Artist, playDate;
