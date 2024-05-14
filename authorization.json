@@ -1,7 +1,7 @@
 {
-    "access_token": "BQDBdBfgiToPktm2Jub8Aa63Qb8oabZw7dwruC7j1ENXO9kvFW4zyShc8xMzGy7clpk_Qk80aKq_zUV7xxyxFNSxl3RGOGLwrWUkdFWXQh_TgnwHiKW4Fetx4O974WZhoIM5ub63Hm2GSL1UY-UhXRBkaIPdoTvDBXaf_EEP740s5NmSc8EWGJZ02A",
+    "access_token": "",
     "token_type": "Bearer",
     "expires_in": 3600,
-    "refresh_token": "AQCQr7eaPDCoZzt2MFeL5M43SS1pQFaVc2Juz2a4Gw1GsMHX5MqpPwcF7ilr0Q-0PMv4uEZLwhdW68OWkErgvYs62ld_hDUpFE8MmbTGPR5INB1HDf9C5MU9lAG189XyU_0",
+    "refresh_token": "",
     "scope": "user-read-recently-played"
   }
