@@ -12,11 +12,11 @@ const credentials = JSON.parse(fs.readFileSync(__dirname + '/credentials.json'))
 const redirect_uri = 'http://localhost:8888/callback';
 
 var con = mysql.createConnection({
-    host: "spotify-listening-history-022724.cnwmw4kealbs.us-east-1.rds.amazonaws.com",
+    host: "",
     port: "3306",
     user: "admin",
-    password: "WearyBunny12916",
-    database: "spotify_listening_history_022724"
+    password: "",
+    database: ""
   });
 
 con.connect(function(err) {
