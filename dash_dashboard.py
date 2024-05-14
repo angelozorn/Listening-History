@@ -9,12 +9,14 @@ import pandas as pd
 db_config = {
     'host': "localhost",
     'user': "root",
-    'password': "WearyBunny12916",
-    'database': "spotify_listening_history"
+    'password': "",
+    'database': ""
 }
 
 # Establish a connection to the database
 connection = mysql.connector.connect(**db_config)
+
+total_time_listened_hours = 0  # Initialize this variable to store total hours listened
 
 try:
     if connection.is_connected():
@@ -22,6 +24,11 @@ try:
 
         # Create a cursor object to execute SQL queries
         cursor = connection.cursor()
+
+        total_time_query = "SELECT SUM(Duration) FROM songs;"
+        cursor.execute(total_time_query)
+        total_time_listened_minutes = cursor.fetchone()[0]
+        total_time_listened_hours = round(total_time_listened_minutes / 60000 / 60, 1)  # Convert to hours
 
         # Query for the 'songs' table
         songs_query = """ SELECT DISTINCT
@@ -31,7 +38,7 @@ try:
                             COUNT(Duration) AS listenCount,
                             SUM(Duration) AS timeListened
                         FROM
-                            songs_test
+                            songs
                         GROUP BY
                             Artist, songName, playDate;"""
 
@@ -46,6 +53,7 @@ try:
 
         # Create a Pandas DataFrame for 'songs'
         songs_df = pd.DataFrame(songs_result, columns=songs_columns)
+        songs_df['playDate'] = pd.to_datetime(songs_df['playDate'], format='%m/%d/%Y')
 
         # Group by "Artist" and "songName" and sum the columns for initialization
         initial_grouped_songs_df = songs_df.groupby(['Artist', 'songName']).agg({
@@ -72,7 +80,7 @@ try:
                 COUNT(Duration) AS listenCount,
                 SUM(Duration) AS timeListened
             FROM
-                split_songs_test
+                split_songs
             
             GROUP BY
                 Artist, playDate;
@@ -89,6 +97,7 @@ try:
 
         # Create a Pandas DataFrame for analytics
         analytics_df = pd.DataFrame(analytics_result, columns=analytics_columns)
+        analytics_df['playDate'] = pd.to_datetime(analytics_df['playDate'], format='%m/%d/%Y')
 
         # Group by "Artist" and sum the columns for initialization
         initial_grouped_artists_df = analytics_df.groupby(['Artist']).agg({
@@ -126,26 +135,47 @@ app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 # Define the app layout
 app.layout = dbc.Container(
     [
-        dcc.DatePickerRange(
-            id='date-range-picker',
-            start_date=songs_df['playDate'].min(),
-            end_date=songs_df['playDate'].max(),
-            display_format='MM/DD/YYYY',
-            style={
-                'font-family': 'Arial, sans-serif',
-                'margin-bottom': '20px',
-                'background-color': 'black',
-                'color': 'white !important'
-                }
+        dbc.Row(
+            [
+                dbc.Col(
+                    dcc.DatePickerRange(
+                        id='date-range-picker',
+                        start_date=songs_df['playDate'].min(),
+                        end_date=songs_df['playDate'].max(),
+                        display_format='MM/DD/YYYY',
+                        style={
+                            'font-family': 'Arial, sans-serif',
+                            'margin-bottom': '20px',
+                            'background-color': 'black',
+                            'color': 'white !important'
+                        }
+                    ),
+                    width=9
+                ),
+                dbc.Col(
+                    dbc.Card(
+                        dbc.CardBody(
+                            [
+                                html.H4("Total Time Listened", className="card-title"),
+                                html.H5(id='total-time-listened', children=f"{total_time_listened_hours} Hours", className="card-text"),
+                            ]
+                        ),
+                        color="dark", inverse=True
+                    ),
+                    width=3
+                )
+            ],
+            style={'backgroundColor': 'black', 'color': 'white', 'margin-bottom': '10px'}
         ),
+        # Additional rows for displaying data tables...
         dbc.Row(
             [
                 dbc.Col(
                     html.H3("Most Played Songs", style={'color': '#1DB954'}),
-                    width=12,  # Full width for the header
+                    width=12,
                 )
             ],
-            style={'backgroundColor': 'black', 'margin-bottom': '10px'}  # Set the background color for the row
+            style={'backgroundColor': 'black', 'margin-bottom': '10px'}
         ),
         dbc.Row(
             [
@@ -155,33 +185,33 @@ app.layout = dbc.Container(
                         columns=[
                             {'name': 'Rank', 'id': 'Rank'},
                             {'name': 'Artist', 'id': 'Artist'},
-                            {'name': 'Song', 'id': 'songName'},  # Update column header
-                            {'name': 'Plays', 'id': 'listenCount'},  # Update column header
-                            {'name': 'Time Listened', 'id': 'timeListened'},  # Update column header
+                            {'name': 'Song', 'id': 'songName'},
+                            {'name': 'Plays', 'id': 'listenCount'},
+                            {'name': 'Time Listened', 'id': 'timeListened'},
                         ],
-                        data=initial_songs_data,  # Initial data for the table
+                        data=initial_songs_data,
                         style_table={'backgroundColor': 'black'},
                         style_header={'backgroundColor': 'black', 'color': 'white'},
                         style_cell={
                             'backgroundColor': 'black',
                             'color': 'white',
-                            'textAlign': 'center',  # Center text horizontally
+                            'textAlign': 'center',
                             'font-family': 'Arial, sans-serif'
                         },
                     ),
-                    width=12,  # Full width for the table
+                    width=12,
                 ),
             ],
-            style={'backgroundColor': 'black', 'margin-bottom': '20px'}  # Set the background color for the row
+            style={'backgroundColor': 'black', 'margin-bottom': '20px'}
         ),
         dbc.Row(
             [
                 dbc.Col(
                     html.H3("Most Played Artists", style={'color': '#1DB954'}),
-                    width=12,  # Full width for the header
+                    width=12,
                 )
             ],
-            style={'backgroundColor': 'black', 'margin-bottom': '10px'}  # Set the background color for the row
+            style={'backgroundColor': 'black', 'margin-bottom': '10px'}
         ),
         dbc.Row(
             [
@@ -191,27 +221,27 @@ app.layout = dbc.Container(
                         columns=[
                             {'name': 'Rank', 'id': 'Rank'},
                             {'name': 'Artist', 'id': 'Artist'},
-                            {'name': 'Plays', 'id': 'listenCount'},  # Update column header
-                            {'name': 'Time Listened', 'id': 'timeListened'},  # Update column header
+                            {'name': 'Plays', 'id': 'listenCount'},
+                            {'name': 'Time Listened', 'id': 'timeListened'},
                         ],
-                        data=initial_artists_data,  # Initial data for the table
+                        data=initial_artists_data,
                         style_table={'backgroundColor': 'black', 'margin-bottom': '200px'},
                         style_header={'backgroundColor': 'black', 'color': 'white'},
                         style_cell={
                             'backgroundColor': 'black',
                             'color': 'white',
-                            'textAlign': 'center',  # Center text horizontally
+                            'textAlign': 'center',
                             'font-family': 'Arial, sans-serif'
                         },
                     ),
-                    width=12,  # Full width for the table
+                    width=12,
                 ),
             ],
-            style={'backgroundColor': 'black', 'margin-bottom': '200px'}  # Set the background color for the row
+            style={'backgroundColor': 'black', 'margin-bottom': '200px'}
         ),
     ],
     fluid=True,
-    style={'backgroundColor': 'black', 'margin-bottom': '200px'},  # Set the background color of the container
+    style={'backgroundColor': 'black', 'margin-bottom': '200px'},
 )
 
 # Define callback to update songs table based on date range
@@ -291,6 +321,21 @@ def update_artists_table(start_date, end_date):
     top_artists_data = top_artists_df.to_dict('records')
 
     return top_artists_data
+
+@app.callback(
+    Output('total-time-listened', 'children'),
+    [Input('date-range-picker', 'start_date'), Input('date-range-picker', 'end_date')]
+)
+def update_total_time_listened(start_date, end_date):
+    if start_date and end_date:
+        start_date = pd.to_datetime(start_date)
+        end_date = pd.to_datetime(end_date)
+        # Filter the DataFrame for the selected date range
+        filtered_df = songs_df[(songs_df['playDate'] >= start_date) & (songs_df['playDate'] <= end_date)]
+        total_milliseconds = filtered_df['timeListened'].sum()
+        total_hours = round(total_milliseconds / (1000 * 60 * 60), 1)  # Convert milliseconds to hours and round to one decimal
+        return f"{total_hours} Hours"
+    return "0 Hours"  # Default value if no dates are selected
 
 if __name__ == '__main__':
     app.run_server(debug=True)
